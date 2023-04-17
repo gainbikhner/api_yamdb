@@ -4,6 +4,9 @@ from django.contrib.auth.tokens import default_token_generator
 from reviews.models import Category, Genre_title, Genre, Titles
 from users.models import User
 import datetime
+from rest_framework.validators import UniqueTogetherValidator
+
+from review.models import Comment, Review
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -100,3 +103,24 @@ class TitlesSerializer(serializers.ModelSerializer):
         model = Titles
         fields = ('id', 'name', 'year', 'rating',
                   'description', 'genre', 'category')
+        
+
+class ReviewSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Review
+        fields = ('title', 'text', 'score', 'author', 'created')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Review.objects.all(),
+                fields=('title', 'author')
+            )
+        ]
+
+
+class CommentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ('id', 'text', 'author', 'pub_date')
+        read_only_fields = ('title', 'review')
+        model = Comment
