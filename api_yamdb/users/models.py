@@ -11,4 +11,16 @@ ROLES = (
 
 class User(AbstractUser):
     bio = models.TextField('Биография', blank=True)
-    role = models.CharField(max_length=9, choices=ROLES, default='user')
+    role = models.CharField(
+        'Роль',
+        max_length=15,
+        choices=ROLES,
+        default='user'
+    )
+    email = models.EmailField(
+        'Почта',
+        unique=True,
+        error_messages={
+            'unique': 'Пользователь с такой почтой уже существует.'
+        }
+    )
