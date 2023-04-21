@@ -1,17 +1,27 @@
 from django.shortcuts import get_object_or_404
+from rest_framework import filters, viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
-from users.models import User
+
+from .filters import TitlesFilterBackend
+from .mixins import (CreateListDestroyUpdateRetrieveViewSetMixin,
+                     CreateListDestroyViewSetMixin)
 from .permissions import IsAdmin
-from .serializers import (SignUpSerializer, TokenSerializer, UserMeSerializer,
-                          UserSerializer)
+from .serializers import (CategorySerializer, Genre_titleSerializer,
+                          GenreSerializer, SignUpSerializer, TitlesSerializer,
+                          TitlesSerializerRetrieve, TokenSerializer,
+                          UserMeSerializer, UserSerializer)
 from .utils import send_confirmation_code
+from reviews.models import Category, Genre, Genre_title, Titles
+from users.models import User
 
 
 class UserViewSet(ModelViewSet):
@@ -71,3 +81,40 @@ class Token(APIView):
             token = AccessToken.for_user(user)
             return Response({'token': str(token)}, status=HTTP_200_OK)
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+
+
+class CategoryViewSet(CreateListDestroyViewSetMixin):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    lookup_field = 'slug'
+    pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+
+
+class GenreViewSet(CreateListDestroyViewSetMixin):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    lookup_field = 'slug'
+    pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+
+
+class Genre_titleViewSet(viewsets.ModelViewSet):
+    queryset = Genre_title.objects.all()
+    serializer_class = Genre_titleSerializer
+
+
+class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
+    queryset = Titles.objects.all()
+    serializer_class = TitlesSerializer
+    pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter, TitlesFilterBackend,)
+    search_fields = ('genre__slug',)
+    filterset_fields = ('genre', 'category', 'year', 'name')
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve' or self.action == 'list':
+            return TitlesSerializerRetrieve
+        return TitlesSerializer
