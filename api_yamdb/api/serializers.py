@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
-
+from reviews.models import Category, Genre_title, Genre, Titles
 from users.models import User
+import datetime
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -25,7 +26,6 @@ class SignUpSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Использовать имя _me_ в качестве username запрещено."
             )
-        return value
 
     class Meta:
         fields = ('email', 'username')
@@ -43,3 +43,60 @@ class TokenSerializer(serializers.Serializer):
         if default_token_generator.check_token(user, confirmation_code):
             return data
         raise serializers.ValidationError('Неверный проверочный код.')
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ('name', 'slug')
+
+
+class Genre_titleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Genre_title
+        fields = '__all__'
+
+
+class GenreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Genre
+        fields = ('name', 'slug')
+
+
+class TitlesSerializerRetrieve(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = Titles
+        fields = ('id', 'name', 'year', 'rating',
+                  'description', 'genre', 'category')
+
+
+class TitlesSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Category.objects.all()
+    )
+    genre = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Genre.objects.all(),
+        many=True
+    )
+
+    def validate_year(self, value):
+        if value > datetime.date.today().year:
+            raise serializers.ValidationError("Год не может быть в будущем")
+        return value
+
+    def validate_name(self, value):
+        if len(value) > 256:
+            raise serializers.ValidationError(
+                'The length of the name field must be 256 characters or less.'
+            )
+        return value
+
+    class Meta:
+        model = Titles
+        fields = ('id', 'name', 'year', 'rating',
+                  'description', 'genre', 'category')
