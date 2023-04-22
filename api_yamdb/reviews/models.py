@@ -1,5 +1,7 @@
 from django.db import models
-from django.core.validators import MaxLengthValidator
+from django.core.validators import (MaxLengthValidator, 
+                                    MinValueValidator, MaxValueValidator)
+from users.models import User
 
 
 class Category(models.Model):
@@ -71,3 +73,50 @@ class Genre_title(models.Model):
 
     def __str__(self):
         return f'{self.title_id} и {self.genre_id}'
+
+
+class Review(models.Model):
+    title = models.ForeignKey(
+        Titles,
+        on_delete=models.CASCADE,
+        related_name='reviews')
+    text = models.TextField()
+    score = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1, 'Не может быть меньше 1'),
+                    MaxValueValidator(10, 'Не может быть больше 10')])
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='reviews'
+    )
+    created = models.DateTimeField(
+        'Дата добавления',
+        auto_now_add=True,
+        db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'author'],
+                name='title_author')
+        ]
+
+    def __str__(self):
+        return self.text
+
+
+class Comment(models.Model):
+    title = models.ForeignKey(
+        Titles,
+        on_delete=models.CASCADE,
+        related_name='comments')
+    text = models.TextField()
+    review = models.ForeignKey(
+        Review,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='comments')
+    pub_date = models.DateTimeField(
+        'Дата добавления', auto_now_add=True, db_index=True)

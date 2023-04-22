@@ -116,6 +116,9 @@ class ReviewSerializer(serializers.ModelSerializer):
                 fields=('title', 'author')
             )
         ]
+        
+        def save(self):
+            title = self.context['request'].title
 
 
 class CommentSerializer(serializers.ModelSerializer):
