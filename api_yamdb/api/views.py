@@ -68,7 +68,7 @@ class SignUp(APIView):
 
         serializer = SignUpSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(username=request.data.get('username'))
             send_confirmation_code(request)
             return Response(serializer.data, status=HTTP_200_OK)
         return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
@@ -134,9 +134,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return title.reviews.all()
 
     def perform_create(self, serializer):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
-        serializer.save(title=title)
+        serializer.save(title=self.context['request'].title,
+                        author=self.request.user)
 
 
 class CommentViewSet(viewsets.ModelViewSet):

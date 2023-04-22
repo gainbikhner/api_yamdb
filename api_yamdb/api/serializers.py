@@ -105,13 +105,14 @@ class TitlesSerializer(serializers.ModelSerializer):
         
 
 class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        slug_field='username', read_only=True,
+        default=serializers.CurrentUserDefault()
+    )
 
     class Meta:
         model = Review
         fields = ('id', 'text', 'score', 'author', 'created')
-
-        def save(self):
-            title = self.context['request'].title
 
 
 class CommentSerializer(serializers.ModelSerializer):
