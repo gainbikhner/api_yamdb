@@ -134,7 +134,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return title.reviews.all()
 
     def perform_create(self, serializer):
-        serializer.save(title=self.context['request'].title,
+        title_id = self.kwargs.get('title_id')
+        title = get_object_or_404(Titles, id=title_id)
+        serializer.save(title=title,
                         author=self.request.user)
 
 

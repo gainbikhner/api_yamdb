@@ -89,7 +89,7 @@ class Review(models.Model):
         on_delete=models.CASCADE,
         related_name='reviews'
     )
-    created = models.DateTimeField(
+    pub_date = models.DateTimeField(
         'Дата добавления',
         auto_now_add=True,
         db_index=True)
