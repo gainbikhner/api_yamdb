@@ -108,13 +108,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ('title', 'text', 'score', 'author', 'created')
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Review.objects.all(),
-                fields=('title', 'author')
-            )
-        ]
+        fields = ('id', 'text', 'score', 'author', 'created')
 
         def save(self):
             title = self.context['request'].title
