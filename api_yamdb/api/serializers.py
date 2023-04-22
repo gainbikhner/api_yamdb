@@ -1,12 +1,11 @@
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
-from reviews.models import Category, Genre_title, Genre, Titles
+from reviews.models import (Category, Genre_title, Genre, Titles,
+                            Comment, Review)
 from users.models import User
 import datetime
 from rest_framework.validators import UniqueTogetherValidator
-
-from review.models import Comment, Review
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -116,7 +115,7 @@ class ReviewSerializer(serializers.ModelSerializer):
                 fields=('title', 'author')
             )
         ]
-        
+
         def save(self):
             title = self.context['request'].title
 
