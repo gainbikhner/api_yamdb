@@ -85,6 +85,7 @@ class TitlesSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         many=True
     )
+    rating = serializers.FloatField(read_only=True)
 
     def validate_year(self, value):
         if value > datetime.date.today().year:

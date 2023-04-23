@@ -23,8 +23,10 @@ from .serializers import (CategorySerializer, Genre_titleSerializer,
                           UserMeSerializer, UserSerializer,
                           CommentSerializer, ReviewSerializer)
 from .utils import send_confirmation_code
-from reviews.models import Category, Genre, Genre_title, Titles, Comment, Review
+from reviews.models import (Category, Genre, Genre_title, Titles,
+                            Comment, Review)
 from users.models import User
+from django.db.models import Avg
 
 
 class UserViewSet(ModelViewSet):
@@ -122,6 +124,10 @@ class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
             return TitlesSerializerRetrieve
         return TitlesSerializer
 
+    def get_queryset(self):
+        new_queryset = Titles.objects.annotate(rating=Avg('reviews__score'))
+        return new_queryset
+
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
@@ -148,7 +154,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         review_id = self.kwargs.get('review_id')
         new_queryset = Comment.objects.filter(title=title_id, review=review_id)
         return new_queryset
-    
+
     def perform_create(self, serializer):
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id)

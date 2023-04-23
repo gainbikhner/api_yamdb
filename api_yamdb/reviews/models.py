@@ -35,12 +35,6 @@ class Titles(models.Model):
         validators=[MaxLengthValidator(256)]
     )
     year = models.IntegerField()
-    # временная затычка
-    rating = models.CharField(
-        max_length=255,
-        # on_delete=models.CASCADE,
-        null=True,
-        blank=True,)
     description = models.TextField(null=True, blank=True,)
     category = models.ForeignKey(
         Category,
