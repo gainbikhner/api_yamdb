@@ -5,7 +5,7 @@ from users.models import User
 
 
 class Category(models.Model):
-    """Категории (типы) произведений"""
+    """Категории (типы) произведений."""
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -17,7 +17,7 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
-    """Жанры произведений"""
+    """Жанры произведений."""
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -29,39 +29,38 @@ class Genre(models.Model):
 
 
 class Title(models.Model):
-    """Произведения"""
+    """Произведения."""
     name = models.CharField(
         max_length=256,
         validators=[MaxLengthValidator(256)]
     )
     year = models.IntegerField()
-    description = models.TextField(null=True, blank=True,)
+    description = models.TextField(null=True, blank=True)
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         verbose_name='Категория',
         null=True,
         blank=True,
-        related_name='category',)
+        related_name='category'
+    )
     genre = models.ManyToManyField(
         Genre,
-        # on_delete=models.SET_NULL,
         through='Genre_title',
         verbose_name='Жанр',
-        # null=True,
         blank=True,
         related_name='genre'
     )
 
-    class Meta:
-        ordering = ('-id',)
-
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ('-id',)
+
 
 class Genre_title(models.Model):
-    """Модель для связывания"""
+    """Модель для связывания."""
     title_id = models.ForeignKey(Title, on_delete=models.SET_NULL, null=True)
     genre_id = models.ForeignKey(Genre, on_delete=models.SET_NULL, null=True)
 
@@ -70,14 +69,18 @@ class Genre_title(models.Model):
 
 
 class Review(models.Model):
+    """Отзывы."""
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
         related_name='reviews')
     text = models.TextField()
     score = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1, 'Не может быть меньше 1'),
-                    MaxValueValidator(10, 'Не может быть больше 10')])
+        validators=[
+            MinValueValidator(1, 'Не может быть меньше 1'),
+            MaxValueValidator(10, 'Не может быть больше 10')
+        ]
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -86,20 +89,23 @@ class Review(models.Model):
     pub_date = models.DateTimeField(
         'Дата добавления',
         auto_now_add=True,
-        db_index=True)
+        db_index=True
+    )
+
+    def __str__(self):
+        return self.text
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=['title', 'author'],
-                name='title_author')
+                name='title_author'
+            )
         ]
-
-    def __str__(self):
-        return self.text
 
 
 class Comment(models.Model):
+    """Комментарии."""
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -111,6 +117,12 @@ class Comment(models.Model):
         related_name='comments'
     )
     author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='comments')
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
     pub_date = models.DateTimeField(
-        'Дата добавления', auto_now_add=True, db_index=True)
+        'Дата добавления',
+        auto_now_add=True,
+        db_index=True
+    )

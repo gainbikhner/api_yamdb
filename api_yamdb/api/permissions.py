@@ -6,25 +6,30 @@ class IsAdmin(permissions.BasePermission):
     message = 'Доступно только администратору.'
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and (request.user.role == 'admin' or request.user.is_superuser)
+        return (
+            request.user.is_authenticated
+            and (request.user.role == 'admin' or request.user.is_superuser)
+        )
 
 
 class IsAdminOrSafeMethods(IsAdmin):
-    """Проверка доступа: администратор."""
+    """Проверка доступа: администратор и анонимный просмотр."""
     def has_permission(self, request, view):
-        return request.method in permissions.SAFE_METHODS or super().has_permission(request, view)
+        return (
+            request.method in permissions.SAFE_METHODS
+            or super().has_permission(request, view)
+        )
 
 
 class IsAuthor(permissions.IsAuthenticatedOrReadOnly):
+    """Проверка доступа: автор или модератор."""
+    message = 'Доступно автору или модератору.'
+
     def has_object_permission(self, request, view, obj):
-        is_safe_method = request.method in permissions.SAFE_METHODS
-        is_author = obj.author == request.user
-        return is_safe_method or is_author or request.user.role == 'moderator' or request.user.role == 'admin' or request.user.is_superuser
-
-
-class IsModerator(IsAdminOrSafeMethods):
-    """Проверка доступа: модератор."""
-    message = 'Доступно модератору.'
-
-    def has_permission(self, request, view):
-        return request.user.role == 'moderator' or super().has_permission(request, view)
+        return (
+            request.method in permissions.SAFE_METHODS
+            or obj.author == request.user
+            or request.user.role == 'moderator'
+            or request.user.role == 'admin'
+            or request.user.is_superuser
+        )

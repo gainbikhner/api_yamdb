@@ -10,6 +10,7 @@ ROLES = (
 
 
 class User(AbstractUser):
+    """Кастомная модель пользователя."""
     bio = models.TextField('Биография', blank=True)
     role = models.CharField(
         'Роль',

@@ -1,34 +1,36 @@
-from rest_framework.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
-from rest_framework import viewsets
-from rest_framework.pagination import LimitOffsetPagination
-from django.shortcuts import get_object_or_404
 
-from .filters import TitlesFilterBackend
-from .mixins import (CreateListDestroyUpdateRetrieveViewSetMixin,
-                     CreateListDestroyViewSetMixin)
-from .permissions import IsAdmin, IsAdminOrSafeMethods, IsAuthor
-from .serializers import (CategorySerializer, Genre_titleSerializer,
-                          GenreSerializer, SignUpSerializer, TitlesSerializer,
-                          TitlesSerializerRetrieve, TokenSerializer,
-                          UserMeSerializer, UserSerializer,
-                          CommentSerializer, ReviewSerializer)
-from .utils import send_confirmation_code
-from reviews.models import (Category, Genre, Genre_title, Title,
-                            Comment, Review)
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
-from django.db.models import Avg
+from .filters import TitleFilterBackend
+from .mixins import (
+    CreateListDestroyUpdateRetrieveViewSetMixin,
+    CreateListDestroyViewSetMixin
+)
+from .permissions import IsAdmin, IsAdminOrSafeMethods, IsAuthor
+from .serializers import (
+    CategorySerializer,
+    CommentSerializer,
+    GenreSerializer,
+    ReviewSerializer,
+    SignUpSerializer,
+    TitleRetrieveSerializer,
+    TitleSerializer,
+    TokenSerializer,
+    UserMeSerializer,
+    UserSerializer
+)
+from .utils import send_confirmation_code
 
 
 class UserViewSet(ModelViewSet):
@@ -95,59 +97,52 @@ class Token(APIView):
 
 
 class CategoryViewSet(CreateListDestroyViewSetMixin):
+    """Вьюсет для работы с категориями."""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
-    pagination_class = PageNumberPagination
-    filter_backends = (filters.SearchFilter,)
+    filter_backends = (SearchFilter,)
     search_fields = ('name',)
     permission_classes = (IsAdminOrSafeMethods,)
 
 
 class GenreViewSet(CreateListDestroyViewSetMixin):
+    """Вьюсет для работы с жанрами."""
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
-    pagination_class = PageNumberPagination
-    filter_backends = (filters.SearchFilter,)
+    filter_backends = (SearchFilter,)
     search_fields = ('name',)
     permission_classes = (IsAdminOrSafeMethods,)
 
 
-class Genre_titleViewSet(viewsets.ModelViewSet):
-    queryset = Genre_title.objects.all()
-    serializer_class = Genre_titleSerializer
-
-
 class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
+    """Вьюсет для работы с произведениями."""
     queryset = Title.objects.all()
-    serializer_class = TitlesSerializer
-    pagination_class = PageNumberPagination
-    filter_backends = (filters.SearchFilter, TitlesFilterBackend,)
+    filter_backends = (SearchFilter, TitleFilterBackend)
     search_fields = ('genre__slug',)
     filterset_fields = ('genre', 'category', 'year', 'name')
     permission_classes = (IsAdminOrSafeMethods,)
 
     def get_serializer_class(self):
         if self.action == 'retrieve' or self.action == 'list':
-            return TitlesSerializerRetrieve
-        return TitlesSerializer
+            return TitleRetrieveSerializer
+        return TitleSerializer
 
     def get_queryset(self):
         new_queryset = Title.objects.annotate(rating=Avg('reviews__score'))
         return new_queryset.order_by('-id')
 
 
-class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
+class ReviewViewSet(ModelViewSet):
+    """Вьюсет для работы с отзывами."""
     serializer_class = ReviewSerializer
-    pagination_class = LimitOffsetPagination
     permission_classes = (IsAuthor,)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
         title = get_object_or_404(Title, id=title_id)
-        return title.reviews.all()
+        return title.reviews.all().order_by('-id')
 
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
@@ -155,10 +150,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
         try:
             serializer.save(title=title, author=self.request.user)
         except IntegrityError:
-            raise ValidationError('Product with this Name and User already exists.')
+            raise ValidationError(
+                'Вы можете оставить только один отзыв на произведение.'
+            )
 
 
-class CommentViewSet(viewsets.ModelViewSet):
+class CommentViewSet(ModelViewSet):
+    """Вьюсет для работы с комментариями."""
     serializer_class = CommentSerializer
     permission_classes = (IsAuthor,)
 
