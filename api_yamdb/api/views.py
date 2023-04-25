@@ -1,3 +1,5 @@
+from rest_framework.exceptions import ValidationError
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -8,7 +10,7 @@ from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework import viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from django.shortcuts import get_object_or_404
@@ -16,14 +18,14 @@ from django.shortcuts import get_object_or_404
 from .filters import TitlesFilterBackend
 from .mixins import (CreateListDestroyUpdateRetrieveViewSetMixin,
                      CreateListDestroyViewSetMixin)
-from .permissions import IsAdmin
+from .permissions import IsAdmin, IsAdminOrSafeMethods, IsAuthor
 from .serializers import (CategorySerializer, Genre_titleSerializer,
                           GenreSerializer, SignUpSerializer, TitlesSerializer,
                           TitlesSerializerRetrieve, TokenSerializer,
                           UserMeSerializer, UserSerializer,
                           CommentSerializer, ReviewSerializer)
 from .utils import send_confirmation_code
-from reviews.models import (Category, Genre, Genre_title, Titles,
+from reviews.models import (Category, Genre, Genre_title, Title,
                             Comment, Review)
 from users.models import User
 from django.db.models import Avg
@@ -60,6 +62,8 @@ class UserMeView(APIView):
 
 class SignUp(APIView):
     """Вью-функция для регистрации и подтвержения по почте."""
+    permission_classes = (AllowAny,)
+
     def post(self, request):
         if User.objects.filter(
             username=request.data.get('username'),
@@ -78,6 +82,8 @@ class SignUp(APIView):
 
 class Token(APIView):
     """Вью-функция для получения токена."""
+    permission_classes = (AllowAny,)
+
     def post(self, request):
         serializer = TokenSerializer(data=request.data)
         if serializer.is_valid():
@@ -95,6 +101,7 @@ class CategoryViewSet(CreateListDestroyViewSetMixin):
     pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
+    permission_classes = (IsAdminOrSafeMethods,)
 
 
 class GenreViewSet(CreateListDestroyViewSetMixin):
@@ -104,6 +111,7 @@ class GenreViewSet(CreateListDestroyViewSetMixin):
     pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
+    permission_classes = (IsAdminOrSafeMethods,)
 
 
 class Genre_titleViewSet(viewsets.ModelViewSet):
@@ -112,12 +120,13 @@ class Genre_titleViewSet(viewsets.ModelViewSet):
 
 
 class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
-    queryset = Titles.objects.all()
+    queryset = Title.objects.all()
     serializer_class = TitlesSerializer
     pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter, TitlesFilterBackend,)
     search_fields = ('genre__slug',)
     filterset_fields = ('genre', 'category', 'year', 'name')
+    permission_classes = (IsAdminOrSafeMethods,)
 
     def get_serializer_class(self):
         if self.action == 'retrieve' or self.action == 'list':
@@ -125,39 +134,43 @@ class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
         return TitlesSerializer
 
     def get_queryset(self):
-        new_queryset = Titles.objects.annotate(rating=Avg('reviews__score'))
-        return new_queryset
+        new_queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+        return new_queryset.order_by('-id')
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     pagination_class = LimitOffsetPagination
+    permission_classes = (IsAuthor,)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
+        title = get_object_or_404(Title, id=title_id)
         return title.reviews.all()
 
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
-        serializer.save(title=title,
-                        author=self.request.user)
+        title = get_object_or_404(Title, id=title_id)
+        try:
+            serializer.save(title=title, author=self.request.user)
+        except IntegrityError:
+            raise ValidationError('Product with this Name and User already exists.')
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    permission_classes = (IsAuthor,)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
         review_id = self.kwargs.get('review_id')
         new_queryset = Comment.objects.filter(title=title_id, review=review_id)
-        return new_queryset
+        return new_queryset.order_by('-id')
 
     def perform_create(self, serializer):
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id)
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
-        serializer.save(review=review, title=title)
+        title = get_object_or_404(Title, id=title_id)
+        serializer.save(review=review, title=title, author=self.request.user)

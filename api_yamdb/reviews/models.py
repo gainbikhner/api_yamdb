@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import (MaxLengthValidator, 
+from django.core.validators import (MaxLengthValidator,
                                     MinValueValidator, MaxValueValidator)
 from users.models import User
 
@@ -28,7 +28,7 @@ class Genre(models.Model):
         ordering = ('-id',)
 
 
-class Titles(models.Model):
+class Title(models.Model):
     """Произведения"""
     name = models.CharField(
         max_length=256,
@@ -62,7 +62,7 @@ class Titles(models.Model):
 
 class Genre_title(models.Model):
     """Модель для связывания"""
-    title_id = models.ForeignKey(Titles, on_delete=models.SET_NULL, null=True)
+    title_id = models.ForeignKey(Title, on_delete=models.SET_NULL, null=True)
     genre_id = models.ForeignKey(Genre, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
@@ -71,7 +71,7 @@ class Genre_title(models.Model):
 
 class Review(models.Model):
     title = models.ForeignKey(
-        Titles,
+        Title,
         on_delete=models.CASCADE,
         related_name='reviews')
     text = models.TextField()
@@ -101,7 +101,7 @@ class Review(models.Model):
 
 class Comment(models.Model):
     title = models.ForeignKey(
-        Titles,
+        Title,
         on_delete=models.CASCADE,
         related_name='comments')
     text = models.TextField()

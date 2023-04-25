@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
-from reviews.models import (Category, Genre_title, Genre, Titles,
+from reviews.models import (Category, Genre_title, Genre, Title,
                             Comment, Review)
 from users.models import User
 import datetime
@@ -71,7 +71,7 @@ class TitlesSerializerRetrieve(serializers.ModelSerializer):
     rating = serializers.FloatField(read_only=True)
 
     class Meta:
-        model = Titles
+        model = Title
         fields = ('id', 'name', 'year', 'rating',
                   'description', 'genre', 'category')
 
@@ -101,10 +101,10 @@ class TitlesSerializer(serializers.ModelSerializer):
         return value
 
     class Meta:
-        model = Titles
+        model = Title
         fields = ('id', 'name', 'year', 'rating',
                   'description', 'genre', 'category')
-        
+
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
@@ -118,6 +118,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        slug_field='username', read_only=True,
+        default=serializers.CurrentUserDefault()
+    )
 
     class Meta:
         fields = ('id', 'text', 'author', 'pub_date')
