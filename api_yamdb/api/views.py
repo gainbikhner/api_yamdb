@@ -94,7 +94,10 @@ class Token(APIView):
             user = get_object_or_404(User, username=username)
             token = AccessToken.for_user(user)
             return Response({'token': str(token)}, status=HTTP_200_OK)
-        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+        return Response(
+            {'confirmation_code': 'Неверный проверочный код.'},
+            status=HTTP_400_BAD_REQUEST
+        )
 
 
 class CategoryViewSet(CreateListDestroyViewSetMixin):
