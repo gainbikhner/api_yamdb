@@ -1,6 +1,7 @@
 from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -132,6 +133,15 @@ class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
     def get_queryset(self):
         new_queryset = Title.objects.annotate(rating=Avg('reviews__score'))
         return new_queryset.order_by('-id')
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        instance = self.get_queryset().get(pk=serializer.instance.pk)
+        serializer = TitleRetrieveSerializer(instance)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class ReviewViewSet(ModelViewSet):
