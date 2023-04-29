@@ -6,7 +6,11 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
+from rest_framework.status import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST
+)
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
@@ -31,7 +35,7 @@ from .serializers import (
     UserMeSerializer,
     UserSerializer
 )
-from .utils import send_confirmation_code
+from .utils import get_title, send_confirmation_code
 
 
 class UserViewSet(ModelViewSet):
@@ -143,8 +147,7 @@ class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
         self.perform_create(serializer)
         instance = self.get_queryset().get(pk=serializer.instance.pk)
         serializer = TitleRetrieveSerializer(instance)
-
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=HTTP_201_CREATED)
 
 
 class ReviewViewSet(ModelViewSet):
@@ -153,15 +156,11 @@ class ReviewViewSet(ModelViewSet):
     permission_classes = (IsAuthor,)
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
-        return title.reviews.all().order_by('-id')
+        return get_title(self).reviews.all().order_by('-id')
 
     def perform_create(self, serializer):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
         try:
-            serializer.save(title=title, author=self.request.user)
+            serializer.save(title=get_title(self), author=self.request.user)
         except IntegrityError:
             raise ValidationError(
                 'Вы можете оставить только один отзыв на произведение.'

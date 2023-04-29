@@ -1,5 +1,3 @@
-from django.utils import timezone
-
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
@@ -98,13 +96,6 @@ class TitleSerializer(serializers.ModelSerializer):
         many=True
     )
     rating = serializers.FloatField(read_only=True)
-
-    def validate_year(self, value):
-        if 0 > value > timezone.now().year:
-            raise serializers.ValidationError(
-                "Год не может быть в будущем или отрицательным."
-            )
-        return value
 
     class Meta:
         model = Title

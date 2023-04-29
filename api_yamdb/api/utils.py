@@ -2,6 +2,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 
+from reviews.models import Title
 from users.models import User
 
 
@@ -14,3 +15,7 @@ def send_confirmation_code(request):
         'access@yambd.ru',
         [user.email]
     )
+
+
+def get_title(object):
+    return get_object_or_404(Title, id=object.kwargs.get('title_id'))
