@@ -1,7 +1,7 @@
 from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -123,9 +123,9 @@ class GenreViewSet(CreateListDestroyViewSetMixin):
 class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
     """Вьюсет для работы с произведениями."""
     queryset = Title.objects.all()
-    filter_backends = (SearchFilter, TitleFilterBackend)
+    filter_backends = (SearchFilter, DjangoFilterBackend)
     search_fields = ('genre__slug',)
-    filterset_fields = ('genre', 'category', 'year', 'name')
+    filterset_class = TitleFilterBackend
     permission_classes = (IsAdminOrSafeMethods,)
 
     def get_serializer_class(self):
