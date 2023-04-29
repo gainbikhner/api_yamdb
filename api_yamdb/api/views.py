@@ -1,11 +1,16 @@
 from django.db import IntegrityError
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
+from rest_framework.status import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST
+)
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
@@ -30,7 +35,7 @@ from .serializers import (
     UserMeSerializer,
     UserSerializer
 )
-from .utils import send_confirmation_code
+from .utils import get_title, send_confirmation_code
 
 
 class UserViewSet(ModelViewSet):
@@ -93,7 +98,10 @@ class Token(APIView):
             user = get_object_or_404(User, username=username)
             token = AccessToken.for_user(user)
             return Response({'token': str(token)}, status=HTTP_200_OK)
-        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
+        return Response(
+            {'confirmation_code': 'Неверный проверочный код.'},
+            status=HTTP_400_BAD_REQUEST
+        )
 
 
 class CategoryViewSet(CreateListDestroyViewSetMixin):
@@ -119,9 +127,9 @@ class GenreViewSet(CreateListDestroyViewSetMixin):
 class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
     """Вьюсет для работы с произведениями."""
     queryset = Title.objects.all()
-    filter_backends = (SearchFilter, TitleFilterBackend)
+    filter_backends = (SearchFilter, DjangoFilterBackend)
     search_fields = ('genre__slug',)
-    filterset_fields = ('genre', 'category', 'year', 'name')
+    filterset_class = TitleFilterBackend
     permission_classes = (IsAdminOrSafeMethods,)
 
     def get_serializer_class(self):
@@ -133,6 +141,14 @@ class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
         new_queryset = Title.objects.annotate(rating=Avg('reviews__score'))
         return new_queryset.order_by('-id')
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        instance = self.get_queryset().get(pk=serializer.instance.pk)
+        serializer = TitleRetrieveSerializer(instance)
+        return Response(serializer.data, status=HTTP_201_CREATED)
+
 
 class ReviewViewSet(ModelViewSet):
     """Вьюсет для работы с отзывами."""
@@ -140,15 +156,11 @@ class ReviewViewSet(ModelViewSet):
     permission_classes = (IsAuthor,)
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
-        return title.reviews.all().order_by('-id')
+        return get_title(self).reviews.all().order_by('-id')
 
     def perform_create(self, serializer):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
         try:
-            serializer.save(title=title, author=self.request.user)
+            serializer.save(title=get_title(self), author=self.request.user)
         except IntegrityError:
             raise ValidationError(
                 'Вы можете оставить только один отзыв на произведение.'
