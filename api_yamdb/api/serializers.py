@@ -1,6 +1,7 @@
 from django.contrib.auth.tokens import default_token_generator
-from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 
 from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
@@ -44,11 +45,16 @@ class TokenSerializer(serializers.Serializer):
     confirmation_code = serializers.CharField()
 
     def validate(self, data):
-        user = get_object_or_404(User, username=data.get('username'))
+        try:
+            user = User.objects.get(username=data.get('username'))
+        except User.DoesNotExist:
+            raise NotFound({'username': 'Несуществующий username.'})
         confirmation_code = data.get('confirmation_code')
         if default_token_generator.check_token(user, confirmation_code):
             return data
-        raise serializers.ValidationError('Неверный проверочный код.')
+        raise serializers.ValidationError(
+            {'confirmation_code': 'Неверный проверочный код.'}
+        )
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -108,6 +114,18 @@ class TitleSerializer(serializers.ModelSerializer):
             'genre',
             'category'
         )
+
+    def validate_year(self, value):
+        if value < 0 or value > timezone.now().year:
+            raise serializers.ValidationError(
+                'Год не может быть в будущем или отрицательным.'
+            )
+
+    def validate_genre(self, value):
+        if value == []:
+            raise serializers.ValidationError(
+                'Список не может быть пустым.'
+            )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
