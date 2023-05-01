@@ -98,10 +98,7 @@ class Token(APIView):
             user = get_object_or_404(User, username=username)
             token = AccessToken.for_user(user)
             return Response({'token': str(token)}, status=HTTP_200_OK)
-        return Response(
-            {'confirmation_code': 'Неверный проверочный код.'},
-            status=HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
 
 
 class CategoryViewSet(CreateListDestroyViewSetMixin):
@@ -141,10 +138,10 @@ class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
         new_queryset = Title.objects.annotate(rating=Avg('reviews__score'))
         return new_queryset.order_by('-id')
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        serializer.save(year=request.data.get('year'))
         instance = self.get_queryset().get(pk=serializer.instance.pk)
         serializer = TitleRetrieveSerializer(instance)
         return Response(serializer.data, status=HTTP_201_CREATED)

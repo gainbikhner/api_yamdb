@@ -9,4 +9,4 @@ class TitleFilterBackend(FilterSet):
 
     class Meta:
         model = Title
-        fields = ['year', 'name']
+        fields = ('year', 'name')
