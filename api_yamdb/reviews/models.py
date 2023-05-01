@@ -1,6 +1,5 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.utils import timezone
 
 from users.models import User
 
@@ -57,16 +56,6 @@ class Title(models.Model):
         ordering = ('-id',)
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(year__lte=timezone.now().year,),
-                name='year_lte_current_year'
-            ),
-            models.CheckConstraint(
-                check=models.Q(year__gte=0,),
-                name='year_gte_minimum_year'
-            ),
-        ]
 
     def __str__(self):
         return self.name
