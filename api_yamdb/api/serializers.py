@@ -120,12 +120,14 @@ class TitleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Год не может быть в будущем или отрицательным.'
             )
+        return value
 
     def validate_genre(self, value):
         if value == []:
             raise serializers.ValidationError(
                 'Список не может быть пустым.'
             )
+        return value
 
 
 class ReviewSerializer(serializers.ModelSerializer):

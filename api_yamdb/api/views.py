@@ -141,7 +141,7 @@ class TitleViewSet(CreateListDestroyUpdateRetrieveViewSetMixin):
     def create(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(year=request.data.get('year'))
+        self.perform_create(serializer)
         instance = self.get_queryset().get(pk=serializer.instance.pk)
         serializer = TitleRetrieveSerializer(instance)
         return Response(serializer.data, status=HTTP_201_CREATED)
